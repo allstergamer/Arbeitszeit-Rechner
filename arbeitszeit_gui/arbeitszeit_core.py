@@ -1,4 +1,4 @@
-# Gemeinsame Daten- und Berechnungslogik für Arbeitszeitrechner (GUI und CLI).
+"""Gemeinsame Daten- und Berechnungslogik für Arbeitszeitrechner (GUI und CLI)."""
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta
@@ -25,7 +25,7 @@ DEFAULT_SETTINGS = {
 
 
 def app_dir() -> Path:
-    # Ordner neben Skript bzw. portablem EXE; CLI und GUI teilen dort ihre Daten.
+    """Ordner neben Skript bzw. portablem EXE; CLI und GUI teilen dort ihre Daten."""
     if getattr(sys, "frozen", False):
         return Path(sys.executable).resolve().parent
     return Path(__file__).resolve().parent
@@ -80,7 +80,7 @@ def parse_diff(value: str) -> int:
 
 
 def clean_settings(data: dict) -> dict:
-    # Fehlende Schlüssel älterer Einstellungsdateien mit Standards ergänzen.
+    """Fehlende Schlüssel älterer Einstellungsdateien mit Standards ergänzen."""
     result = json.loads(json.dumps(DEFAULT_SETTINGS))
     if isinstance(data, dict):
         for key in ("fruehstueckspause", "mittagspause", "wochen_soll", "appearance"):
@@ -127,7 +127,8 @@ class ArbeitszeitDaten:
         return int(self.einstellungen["tages_soll"].get(str(datum.weekday()), 468))
 
     def berechnen(self, datum_text: str, start_text: str, ende_text: str,
-                  fruehstueck: int, mittag: int, notizen: str = "", identifier: int | None = None) -> dict:
+                  fruehstueck: int, mittag: int, notizen: str = "",
+                  identifier: int | None = None, azv: bool = False) -> dict:
         datum = parse_date(datum_text)
         start = parse_time(start_text)
         ende = parse_time(ende_text)
@@ -148,7 +149,9 @@ class ArbeitszeitDaten:
             "lunch": int(mittag),
             "worked": netto,
             "target": soll,
-            "diff": netto - soll,
+            # Bei AZV wird die tatsächliche Arbeitszeit behalten, aber keine Differenz gebucht.
+            "diff": 0 if azv else netto - soll,
+            "azv": bool(azv),
             "notes": notizen.strip(),
         }
 
@@ -193,18 +196,22 @@ class ArbeitszeitDaten:
             if len(cells) < 5 or cells[0].startswith("-") or cells[0].lower() == "id":
                 continue
             try:
-                if len(cells) >= 9:  # neues Format inklusive Notizen
-                    ident, d, day, start, end, breakfast, lunch, diff, notes = cells[:9]
+                if len(cells) >= 10:  # neues Format mit AZV und Notizen
+                    ident, d, day, start, end, breakfast, lunch, diff, azv_text, notes = cells[:10]
+                    azv = azv_text.lower() in ("ja", "true", "1", "x")
                     worked = None
-                elif len(cells) >= 8:  # bisheriges Format
+                elif len(cells) >= 9:  # bisheriges Format inklusive Notizen
+                    ident, d, day, start, end, breakfast, lunch, diff, notes = cells[:9]
+                    azv, worked = False, None
+                elif len(cells) >= 8:  # älteres Format
                     ident, d, day, start, end, breakfast, lunch, diff = cells[:8]
-                    notes, worked = "", None
+                    notes, azv, worked = "", False, None
                 elif len(cells) == 6:  # ältere Version ohne Pausen
                     ident, d, day, start, end, diff = cells
-                    breakfast, lunch, notes, worked = 0, 0, "", None
+                    breakfast, lunch, notes, azv, worked = 0, 0, "", False, None
                 else:  # sehr altes Format ohne ID und Pausen
                     d, day, start, end, diff = cells[:5]
-                    ident, breakfast, lunch, notes, worked = self.naechste_id, 0, 0, "", None
+                    ident, breakfast, lunch, notes, azv, worked = self.naechste_id, 0, 0, "", False, None
                 datum = parse_date(d).isoformat()
                 dt = date.fromisoformat(datum)
                 start_min = parse_time(start)
@@ -215,7 +222,8 @@ class ArbeitszeitDaten:
                 netto = end_min - start_min - int(breakfast) - int(lunch)
                 entry = {"id": int(ident), "date": datum, "day": day or WOCHENTAGE[dt.weekday()],
                          "start": start, "end": end, "breakfast": int(breakfast), "lunch": int(lunch),
-                         "worked": netto, "target": target, "diff": parse_diff(diff), "notes": notes}
+                         "worked": netto, "target": target,
+                         "diff": 0 if azv else parse_diff(diff), "azv": azv, "notes": notes}
                 # Altdaten behalten ihre gespeicherte Differenz; neue Einträge werden normal berechnet.
                 self.eintraege[datum] = entry
                 self.naechste_id = max(self.naechste_id, int(ident) + 1)
@@ -223,13 +231,14 @@ class ArbeitszeitDaten:
                 continue
 
     def exportieren(self) -> None:
-        rows = ["# Arbeitszeitnachweis", "", "| ID | Datum | Wochentag | Beginn | Ende | Frühstück (min) | Mittag (min) | Differenz | Notizen |",
-                "|---:|---|---|---:|---:|---:|---:|---:|---|"]
+        rows = ["# Arbeitszeitnachweis", "", "| ID | Datum | Wochentag | Beginn | Ende | Frühstück (min) | Mittag (min) | Differenz | AZV | Notizen |",
+                "|---:|---|---|---:|---:|---:|---:|---:|---:|---|"]
         total = 0
         for e in sorted(self.eintraege.values(), key=lambda x: x["date"]):
             total += int(e.get("diff", 0))
             notes = str(e.get("notes", "")).replace("|", "\\|").replace("\n", " ")
-            rows.append(f"| {e['id']} | {e['date']} | {e['day']} | {e['start']} | {e['end']} | {e['breakfast']} | {e['lunch']} | {fmt_minutes(e['diff'], True)} | {notes} |")
+            azv_text = "Ja" if e.get("azv", False) else "Nein"
+            rows.append(f"| {e['id']} | {e['date']} | {e['day']} | {e['start']} | {e['end']} | {e['breakfast']} | {e['lunch']} | {fmt_minutes(e['diff'], True)} | {azv_text} | {notes} |")
         rows += ["", f"**Gesamtdifferenz:** {fmt_minutes(total, True)}", "", f"<!-- naechste_id: {self.naechste_id} -->", ""]
         self.dateipfad.write_text("\n".join(rows), encoding="utf-8")
 
@@ -237,5 +246,5 @@ class ArbeitszeitDaten:
         """Sollzeit nach Settingsänderung für genau diesen Eintrag aktualisieren."""
         e = self.eintraege[datum]
         updated = self.berechnen(datetime.strptime(datum, "%Y-%m-%d").strftime("%d.%m.%Y"), e["start"], e["end"],
-                                 e["breakfast"], e["lunch"], e.get("notes", ""), e["id"])
+                                 e["breakfast"], e["lunch"], e.get("notes", ""), e["id"], e.get("azv", False))
         self.eintraege[datum] = updated
