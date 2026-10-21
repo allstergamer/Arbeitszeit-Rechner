@@ -2,9 +2,14 @@
 benötigt nur Python-Standardbibliothek."""
 from datetime import date, datetime, timedelta
 import calendar
+from logging import root
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
+from turtle import save
 from arbeitszeit_core import ArbeitszeitDaten, WOCHENTAGE, fmt_minutes, parse_date, parse_duration, parse_time
+import os
+import sys
+import subprocess
 
 APP_TITLE = "Arbeitszeitrechner"
 
@@ -16,6 +21,15 @@ PAUSENWERTE = [str(minuten) for minuten in range(0, 181, 5)]
 MONATSNAMEN = ["Januar", "Februar", "März", "April", "Mai", "Juni",
                "Juli", "August", "September", "Oktober", "November", "Dezember"]
 
+
+def resource_path(relative_path):
+    """Findet Dateien sowohl im Python-Code als auch in der PyInstaller-EXE."""
+    if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+        base_path = sys._MEIPASS
+    else:
+        base_path = os.path.dirname(os.path.abspath(__file__))
+
+    return os.path.join(base_path, relative_path)
 
 class KalenderPopup(tk.Toplevel):
     # Kleiner Kalender ohne zusätzliche Bibliotheken.
@@ -29,6 +43,8 @@ class KalenderPopup(tk.Toplevel):
         self.jahr = self.aktuelles_datum.year
         self.monat = self.aktuelles_datum.month
         self.title("Datum auswählen")
+        self.farben = parent.colors
+        self.configure(bg=self.farben["bg"])
         self.resizable(False, False)
         self.transient(parent)
         self.grab_set()
@@ -77,6 +93,7 @@ class KalenderPopup(tk.Toplevel):
 
 class ArbeitszeitGUI(tk.Tk):
     # Startet das Fenster und baut die Navigation auf.
+    
     def __init__(self):
         super().__init__()
         self.daten = ArbeitszeitDaten()
@@ -91,31 +108,79 @@ class ArbeitszeitGUI(tk.Tk):
         self._setup_style()
         self._build_shell()
         self.show_page("Dashboard")
-
+        self.iconphoto(True, tk.PhotoImage(file=resource_path("icon.png")))
     # Legt Farben, Schriftarten und das Aussehen der Tabellen fest.
+
     def _setup_style(self):
         style = ttk.Style(self)
         try:
-            style.theme_use("vista" if "vista" in style.theme_names() else "clam")
+            style.theme_use("clam")
         except tk.TclError:
             pass
-        appearance = self.daten.einstellungen.get("appearance", "System")
+
+        appearance = self.daten.einstellungen.get("appearance", "Dunkel")
         if appearance == "Dunkel":
             bg, panel, fg, accent = "#2b3038", "#2b3038", "#edf0f5", "#5b9cff"
         else:
             bg, panel, fg, accent = "#f3f5f7", "#f3f5f7", "#202632", "#1769d2"
-        self.colors = {"bg": bg, "panel": panel, "fg": fg, "muted": "#7b8493", "accent": accent, "line": "#dce1e8"}
+
+        self.colors = {
+            "bg": bg,
+            "panel": panel,
+            "fg": fg,
+            "muted": "#7b8493",
+            "accent": accent,
+            "line": "#7b8493",
+        }
+
         self.configure(bg=bg)
+
+        # Frames und Labels
         style.configure("TFrame", background=bg)
         style.configure("Panel.TFrame", background=panel)
         style.configure("TLabel", background=bg, foreground=fg, font=("Segoe UI", 10))
+        style.configure("TableBorder.TFrame", background="#7b8493")
         style.configure("Title.TLabel", font=("Segoe UI", 22, "bold"), background=bg, foreground=fg)
         style.configure("Subtitle.TLabel", font=("Segoe UI", 10), background=bg, foreground=self.colors["muted"])
         style.configure("CardTitle.TLabel", font=("Segoe UI", 10), background=panel, foreground=self.colors["muted"])
         style.configure("CardValue.TLabel", font=("Segoe UI", 20, "bold"), background=panel, foreground=fg)
-        style.configure("TButton", font=("Segoe UI", 10), padding=(10, 7))
-        style.configure("Treeview", rowheight=20, font=("Segoe UI", 10), background=bg, fieldbackground=bg, foreground=fg)
-        style.configure("Treeview.Heading", font=("Segoe UI", 9, "bold"), padding=7, background=fg, fieldbackground=fg, foreground=bg)
+
+
+        # Normale Buttons
+        style.configure("TButton", background=panel, foreground=fg, font=("Segoe UI", 10), padding=(14, 9), borderwidth=1, relief="flat", bordercolor="#7b8493", focusthickness=0)
+        style.map("TButton", background=[("pressed", accent), ("active", "#e1e9f5" if appearance != "Dunkel" else "#3a4658")], foreground=[("disabled", self.colors["muted"])], bordercolor=[("focus", accent), ("active", accent)])
+
+        # Primäre Aktionsbuttons, z. B. Speichern und Neuer Eintrag
+        style.configure("Accent.TButton", background=accent, foreground="#ffffff", font=("Segoe UI", 10, "bold"), padding=(15, 9), borderwidth=0, relief="flat", focusthickness=0)
+        style.map("Accent.TButton", background=[("pressed", "#1554a8" if appearance != "Dunkel" else "#397bd4"), ("active", "#347fe0" if appearance != "Dunkel" else "#76adff"), ("disabled", panel)], foreground=[("disabled", self.colors["muted"])])
+
+        # Dropdowns
+        style.configure("TCombobox", fieldbackground=panel, background=panel, foreground=fg, arrowcolor=fg, padding=(9, 8), borderwidth=1, relief="flat", bordercolor="#7b8493")
+        style.map("TCombobox", fieldbackground=[("readonly", panel), ("disabled", bg)], foreground=[("readonly", fg), ("disabled", self.colors["muted"])], bordercolor=[("focus", accent), ("active", accent)], arrowcolor=[("disabled", self.colors["muted"])])
+
+        # Eingabefelder
+        style.configure("TEntry", fieldbackground=panel, foreground=fg, insertcolor=fg, padding=(9, 8), borderwidth=1, relief="flat", bordercolor="#7b8493")
+        style.map("TEntry", bordercolor=[("focus", accent)], fieldbackground=[("disabled", bg)], foreground=[("disabled", self.colors["muted"])])
+        style.configure("Custom.TCheckbutton", background=panel, foreground=fg, font=("Segoe UI", 10), padding=(2, 4))
+        style.map("Custom.TCheckbutton", background=[("active", panel)], foreground=[("disabled", self.colors["muted"])])
+
+
+        # Tabellen: Außenrahmen im Dashboard entfernen
+        style.configure("Dashboard.Treeview", background=bg, foreground=fg, fieldbackground=bg, rowheight=24, borderwidth=0, relief="flat")
+
+        # Das Clam-Theme zeichnet den Rahmen über Treeview.field.
+        # Durch dieses Layout wird das rahmenzeichnende Element umgangen.
+        style.layout("Treeview", [("Treeview.treearea", {"sticky": "nswe"})])
+        style.map("Dashboard.Treeview", background=[("selected", accent)], foreground=[("selected", "#ffffff")])
+
+        # Tabellen
+        style.configure("Treeview", background=bg, foreground=fg, fieldbackground=bg, rowheight=24, borderwidth=0, relief="flat")
+        style.configure("Treeview.Heading", background=panel, foreground=fg, relief="raised", borderwidth=1)
+        style.map("Treeview", background=[("selected", accent)], foreground=[("selected", "#ffffff")])
+        style.map("Treeview.Heading", background=[("active", panel), ("pressed", panel)], foreground=[("active", fg), ("pressed", fg)])
+
+
+
 
     # Erstellt die feste Seitenleiste und den Bereich für die Seiten.
     def _build_shell(self):
@@ -252,18 +317,10 @@ class ArbeitszeitGUI(tk.Tk):
         head = ttk.Frame(self.header_container)
         head.pack(fill="x", padx=28, pady=(24, 18))
 
-        ttk.Label(
-            head,
-            text=title,
-            style="Title.TLabel"
-        ).pack(anchor="w")
+        ttk.Label(head, text=title, style="Title.TLabel").pack(anchor="w")
 
         if subtitle:
-            ttk.Label(
-                head,
-                text=subtitle,
-                style="Subtitle.TLabel"
-            ).pack(anchor="w", pady=(4, 0))
+            ttk.Label(head, text=subtitle, style="Subtitle.TLabel").pack(anchor="w", pady=(4, 0))
 
     # Erstellt einen einheitlich gestalteten Inhaltsbereich.
     def _panel(self, parent, padding=16):
@@ -275,9 +332,7 @@ class ArbeitszeitGUI(tk.Tk):
         ttk.Label(frame, text=label, style="CardTitle.TLabel").pack(anchor="w")
         ttk.Label(frame, text=value, style="CardValue.TLabel").pack(anchor="w", pady=(7, 2))
         if note:
-            tk.Label(
-                frame, text=note, bg=self.colors["panel"],
-                fg=self.colors["muted"], font=("Segoe UI", 9), anchor="w"
+            tk.Label(frame, text=note, bg=self.colors["panel"], fg=self.colors["muted"], font=("Segoe UI", 9), anchor="w"
             ).pack(anchor="w")
         return frame
 
@@ -329,11 +384,18 @@ class ArbeitszeitGUI(tk.Tk):
         top.pack(fill="x")
         ttk.Label(top, text="Zuletzt erfasst", font=("Segoe UI", 13, "bold"), background=self.colors["panel"], foreground=self.colors["fg"]).pack(side="left")
         ttk.Button(top, text="Alle Einträge", command=lambda: self.show_page("Einträge")).pack(side="right")
-        tree = ttk.Treeview(left, columns=("date", "hours", "diff"), show="headings", height=9)
-        for col, text, width in [("date", "Datum", 120), ("hours", "Arbeitszeit", 120), ("diff", "Differenz", 120)]:
+        table_frame = ttk.Frame(left, style="Panel.TFrame")
+        table_frame.pack(fill="both", expand=True, pady=(12, 0))
+        tree = ttk.Treeview(table_frame, columns=("date", "hours", "diff"), show="headings", height=9, style="Dashboard.Treeview")
+        for col, text, width in [
+            ("date", "Datum", 120),
+            ("hours", "Arbeitszeit", 120),
+            ("diff", "Differenz", 120)
+        ]:
             tree.heading(col, text=text)
-            tree.column(col, width=width, anchor="w")
-        tree.pack(fill="both", expand=True, pady=(12, 0))
+            tree.column(col, width=width, anchor="center")
+
+        tree.pack(fill="both", expand=True, padx=0, pady=0)
         for e in self.daten.sortiert()[:8]: tree.insert("", "end", values=(datetime.strptime(e["date"], "%Y-%m-%d").strftime("%d.%m.%Y"), fmt_minutes(e["worked"]), fmt_minutes(e["diff"], True)))
         right = self._panel(row, 16)
         right.pack(side="left", fill="y", padx=(10, 0))
@@ -386,10 +448,7 @@ class ArbeitszeitGUI(tk.Tk):
         block.pack(fill="x", pady=(8, 4))
         ttk.Label(block, text="Notizen (optional)").pack(anchor="w", pady=(0, 5))
         ttk.Entry(block, textvariable=variables["notes"]).pack(fill="x")
-        ttk.Checkbutton(
-            panel, text="AZV – Arbeitszeitkonto ausgleichen (keine Plus- oder Minusstunden)",
-            variable=variables["azv"]
-        ).pack(anchor="w", pady=(12, 0))
+        ttk.Checkbutton(panel, text="AZV – Arbeitszeitkonto ausgleichen (keine Plus- oder Minusstunden)", variable=variables["azv"], style="Custom.TCheckbutton").pack(anchor="w", pady=(12, 0))
         calc = ttk.Label(panel, text="Nettoarbeitszeit: —     Differenz: —", font=("Segoe UI", 11, "bold"))
         calc.pack(anchor="w", pady=(18, 0))
         def preview(*_):
@@ -414,6 +473,9 @@ class ArbeitszeitGUI(tk.Tk):
         buttons = ttk.Frame(panel, style="Panel.TFrame")
         buttons.pack(fill="x", pady=(20, 0))
         ttk.Button(buttons, text="Abbrechen", command=lambda: self.show_page("Einträge" if initial else "Dashboard")).pack(side="right", padx=(8, 0))
+        
+        
+        
         def save():
             try:
                 dt = parse_date(variables["date"].get())
@@ -432,6 +494,10 @@ class ArbeitszeitGUI(tk.Tk):
             except (ValueError, OSError) as exc: messagebox.showerror("Eingabe prüfen", str(exc))
         ttk.Button(buttons, text="Speichern", style="Accent.TButton", command=save).pack(side="right")
 
+        
+
+
+
     # Zeigt die Einträge mit Suche, Sortierung, Bearbeiten und Löschen.
     def page_entries(self):
         self._header("Einträge", "Alle erfassten Arbeitstage verwalten. Spaltenüberschriften sortieren die Liste.")
@@ -442,25 +508,28 @@ class ArbeitszeitGUI(tk.Tk):
         search = ttk.Entry(toolbar, textvariable=self.filter_var, width=32)
         search.pack(side="left")
         ttk.Button(toolbar, text="＋ Neuer Eintrag", style="Accent.TButton", command=lambda: self.show_page("Eintrag erfassen")).pack(side="right")
-        panel = self._panel(self.main, 10)
+
+        panel = ttk.Frame(self.main, padding=0)
         panel.pack(fill="both", expand=True, padx=28, pady=(0, 24))
         cols = ("id", "date", "day", "start", "end", "worked", "break", "diff", "azv", "notes")
-        tree = ttk.Treeview(panel, columns=cols, show="headings", selectmode="browse")
+        table_frame = ttk.Frame(panel, padding=0)
+        table_frame.pack(fill="both", expand=True)
+        tree = ttk.Treeview(table_frame, columns=cols, show="headings", selectmode="browse")
         headings = {"id":"ID", "date":"Datum", "day":"Wochentag", "start":"Beginn", "end":"Ende", "worked":"Netto", "break":"Pausen", "diff":"Differenz", "azv":"AZV", "notes":"Notizen"}
         widths = {"id":45,"date":100,"day":105,"start":70,"end":70,"worked":80,"break":75,"diff":90,"azv":55,"notes":220}
         for col in cols:
             tree.heading(col, text=headings[col], command=lambda c=col: self.sort_tree(c, tree))
             tree.column(col, width=widths[col], minwidth=40, anchor="w")
-        yscroll = ttk.Scrollbar(panel, orient="vertical", command=tree.yview)
-        xscroll = ttk.Scrollbar(panel, orient="horizontal", command=tree.xview)
-        tree.configure(yscrollcommand=yscroll.set, xscrollcommand=xscroll.set)
-        tree.grid(row=0, column=0, sticky="nsew")
-        yscroll.grid(row=0, column=1, sticky="ns")
-        xscroll.grid(row=1, column=0, sticky="ew")
-        panel.rowconfigure(0, weight=1)
-        panel.columnconfigure(0, weight=1)
+            yscroll = ttk.Scrollbar(table_frame, orient="vertical", command=tree.yview)
+            xscroll = ttk.Scrollbar(table_frame, orient="horizontal", command=tree.xview)
+            tree.configure(yscrollcommand=yscroll.set, xscrollcommand=xscroll.set)
+            tree.grid(row=0, column=0, sticky="nsew")
+            yscroll.grid(row=0, column=1, sticky="ns")
+            xscroll.grid(row=1, column=0, sticky="ew")
+            table_frame.rowconfigure(0, weight=1)
+            table_frame.columnconfigure(0, weight=1)
         actions = ttk.Frame(panel, style="Panel.TFrame")
-        actions.grid(row=2, column=0, sticky="ew", pady=(10, 0))
+        actions.pack(fill="x", pady=(10, 0))
         def selected():
             item = tree.focus()
             if not item: messagebox.showwarning("Auswahl fehlt", "Bitte zuerst einen Eintrag auswählen."); return None
@@ -743,7 +812,7 @@ class ArbeitszeitGUI(tk.Tk):
             tree = ttk.Treeview(parent, columns=spalten, show="headings", height=16)
             for spalte, text, breite in [("period", "Zeitraum", 220), ("count", "Einträge", 100),("worked", "Nettozeit", 130), ("target", "Sollzeit", 130),("diff", "Differenz", 130)]:
                 tree.heading(spalte, text=text)
-                tree.column(spalte, width=breite, anchor="w")
+                tree.column(spalte, width=breite, anchor="center")
             tree.pack(fill="both", expand=True)
             gruppen = {}
             for eintrag in self.daten.eintraege.values():
@@ -824,7 +893,7 @@ class ArbeitszeitGUI(tk.Tk):
         panel.pack(fill="both", expand=True, padx=28, pady=(0, 24))
         s = self.daten.einstellungen
         vars = {"week": tk.StringVar(value=fmt_minutes(s["wochen_soll"])), "breakfast": tk.StringVar(value=str(s["fruehstueckspause"])),
-                "lunch": tk.StringVar(value=str(s["mittagspause"])), "appearance": tk.StringVar(value=s.get("appearance", "System"))}
+                "lunch": tk.StringVar(value=str(s["mittagspause"])), "appearance": tk.StringVar(value=s.get("appearance", "Dunkel"))}
         ttk.Label(panel, text="Sollzeiten und Pausen", font=("Segoe UI", 13, "bold")).grid(row=0,column=0,columnspan=4,sticky="w",pady=(0,12))
         settings_fields = [("Wochen-Soll (HH:MM)","week"),("Frühstückspause (Minuten)","breakfast"),("Mittagspause (Minuten)","lunch")]
         for i,(label,key) in enumerate(settings_fields, start=1):
@@ -860,7 +929,7 @@ class ArbeitszeitGUI(tk.Tk):
                 ttk.Label(inner,text="–").pack(side="left",padx=3)
                 ttk.Combobox(inner, textvariable=b, values=UHRZEITEN, state="readonly", width=7).pack(side="left")
         ttk.Label(panel,text="Darstellung").grid(row=16,column=0,sticky="w",pady=(18,6))
-        ttk.Combobox(panel,textvariable=vars["appearance"],values=("System","Hell","Dunkel"),state="readonly",width=15).grid(row=16,column=1,sticky="w",pady=(18,6))
+        ttk.Combobox(panel,textvariable=vars["appearance"],values=("Hell","Dunkel"),state="readonly",width=15).grid(row=16,column=1,sticky="w",pady=(18,6))
         ttk.Label(panel,text="Datenordner",style="Subtitle.TLabel").grid(row=17,column=0,sticky="w",pady=(12,0))
         ttk.Label(panel,text=str(self.daten.directory),style="Subtitle.TLabel").grid(row=17,column=1,columnspan=3,sticky="w",pady=(12,0))
         buttons=ttk.Frame(panel,style="Panel.TFrame")
@@ -876,12 +945,17 @@ class ArbeitszeitGUI(tk.Tk):
                 for (day,model),(a,b) in model_vars.items(): parse_time(a.get()); parse_time(b.get()); s["zeiten"][day][model] = [a.get().strip(),b.get().strip()]
                 s["appearance"] = vars["appearance"].get()
                 self.daten.einstellungen_speichern()
-                messagebox.showinfo("Gespeichert","Einstellungen gespeichert. Die Darstellung wird aktualisiert.")
+                messagebox.showinfo("Gespeichert","Einstellungen gespeichert. Die Darstellung wird aktualisiert. Die Anwendung startet neu.")
                 self._setup_style()
                 self.show_page("Einstellungen")
             except (ValueError, OSError) as exc: messagebox.showerror("Einstellungen prüfen",str(exc))
+
+        def save_settings_and_restart():
+            save()
+            subprocess.Popen([sys.executable] + sys.argv)
+            self.destroy()
         ttk.Button(buttons,text="Standardeinstellungen laden",command=lambda:self.reset_settings()).pack(side="left")
-        ttk.Button(buttons,text="Speichern",style="Accent.TButton",command=save).pack(side="right")
+        ttk.Button(buttons,text="Speichern",style="Accent.TButton",command=save_settings_and_restart).pack(side="right")
 
     # Setzt die Einstellungen nach Rückfrage auf Standardwerte zurück.
     def reset_settings(self):
