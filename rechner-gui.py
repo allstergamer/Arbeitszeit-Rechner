@@ -109,6 +109,7 @@ class ArbeitszeitGUI(tk.Tk):
         self._build_shell()
         self.show_page("Dashboard")
         self.iconphoto(True, tk.PhotoImage(file=resource_path("icon.png")))
+        self.iconbitmap(resource_path("icon.ico"))
     # Legt Farben, Schriftarten und das Aussehen der Tabellen fest.
 
     def _setup_style(self):
@@ -491,7 +492,9 @@ class ArbeitszeitGUI(tk.Tk):
                 self.daten.speichern(e)
                 messagebox.showinfo("Gespeichert", f"Eintrag für {dt.strftime('%d.%m.%Y')} wurde gespeichert.")
                 self.show_page("Einträge")
-            except (ValueError, OSError) as exc: messagebox.showerror("Eingabe prüfen", str(exc))
+            except (ValueError, OSError) as exc: 
+                messagebox.showerror("Einstellungen prüfen", str(exc))
+                return False
         ttk.Button(buttons, text="Speichern", style="Accent.TButton", command=save).pack(side="right")
 
         
@@ -945,15 +948,25 @@ class ArbeitszeitGUI(tk.Tk):
                 for (day,model),(a,b) in model_vars.items(): parse_time(a.get()); parse_time(b.get()); s["zeiten"][day][model] = [a.get().strip(),b.get().strip()]
                 s["appearance"] = vars["appearance"].get()
                 self.daten.einstellungen_speichern()
-                messagebox.showinfo("Gespeichert","Einstellungen gespeichert. Die Darstellung wird aktualisiert. Die Anwendung startet neu.")
-                self._setup_style()
-                self.show_page("Einstellungen")
+                return True 
             except (ValueError, OSError) as exc: messagebox.showerror("Einstellungen prüfen",str(exc))
 
         def save_settings_and_restart():
-            save()
-            subprocess.Popen([sys.executable] + sys.argv)
+            if not save():
+                return
+
+            env = os.environ.copy()
+            env["PYINSTALLER_RESET_ENVIRONMENT"] = "1"
+
+            subprocess.Popen(
+                [sys.executable] + sys.argv,
+                env=env,
+                cwd=os.getcwd()
+            )
+
             self.destroy()
+
+
         ttk.Button(buttons,text="Standardeinstellungen laden",command=lambda:self.reset_settings()).pack(side="left")
         ttk.Button(buttons,text="Speichern",style="Accent.TButton",command=save_settings_and_restart).pack(side="right")
 

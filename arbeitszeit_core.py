@@ -64,9 +64,10 @@ def parse_duration(value: str) -> int:
 
 
 def fmt_minutes(minutes: int, signed: bool = False) -> str:
-    sign = "−" if minutes < 0 else ("+" if signed and minutes > 0 else "")
+    sign = "-" if minutes < 0 else ("+" if signed and minutes > 0 else "")
     minutes = abs(int(minutes))
     return f"{sign}{minutes // 60:02d}:{minutes % 60:02d}"
+
 
 
 def parse_diff(value: str) -> int:
