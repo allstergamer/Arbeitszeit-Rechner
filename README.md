@@ -1,108 +1,107 @@
 # Arbeitszeit-Rechner
 
-Ein in Python entwickelter Arbeitszeit-Rechner zur Erfassung von Arbeitstagen und zur Berechnung von Arbeitszeitdifferenzen. Das Projekt bietet derzeit eine Anwendung für das Terminal. Eine grafische Benutzeroberfläche ist für die Zukunft geplant.
+Ein grafischer Arbeitszeit-Rechner in Python zur Erfassung, Verwaltung und Auswertung von Arbeitszeiten.
 
-Die Terminal-Version (`rechner-cmd.py`) wird auch nach der Entwicklung der grafischen Anwendung separat verfügbar bleiben.
+Die Anwendung bietet eine übersichtliche Benutzeroberfläche, automatische Arbeitszeitberechnungen sowie verschiedene Möglichkeiten zur Auswertung und Konfiguration.
+
+Das Projekt wird aktiv weiterentwickelt.
+
+## Screenshots
+
+### Dashboard
+
+Übersicht über die erfassten Arbeitszeiten und die wichtigsten Kennzahlen.
+
+![Dashboard](images/dashboard.png)
+
+### Arbeitszeit erfassen
+
+Arbeitszeiten eintragen und die berechneten Werte automatisch ermitteln lassen.
+
+![Arbeitszeit erfassen](images/erfassung.png)
+
+### Auswertungen
+
+Gespeicherte Arbeitszeiten übersichtlich auswerten und zusammenfassen.
+
+![Auswertungen](images/auswertungen.png)
+
+### Einstellungen
+
+Die Anwendung an die eigenen Arbeitszeiten und Darstellungspräferenzen anpassen.
+
+![Einstellungen](images/einstellungen.png)
 
 ## Funktionen
 
-- **Arbeitstage erfassen:** Wochentag, Datum, Arbeitsbeginn und Arbeitsende manuell eingeben.
-- **Automatische Pausenberechnung:** Eine Frühstückspause von 20 Minuten und eine Mittagspause von 30 Minuten werden automatisch abgezogen.
-- **Arbeitszeitdifferenz berechnen:** Anzeige der täglichen Differenz zur hinterlegten Regelarbeitszeit mit positivem oder negativem Vorzeichen.
-- **Einträge verwalten:** Erfasste Arbeitstage anzeigen und einzelne Einträge über ihre eindeutige ID löschen.
-- **Doppelte Einträge vermeiden:** Wird ein bereits erfasstes Datum erneut eingegeben, wird der vorhandene Eintrag aktualisiert.
-- **Dauerhafte Speicherung:** Arbeitstage werden in einer Markdown-Datei gespeichert und beim nächsten Programmstart wieder geladen.
-- **Übersichtliche Ausgabe:** Die erfassten Arbeitstage werden chronologisch sortiert angezeigt.
-- **Flexible Datumseingabe:** Datumsangaben sind sowohl mit zweistelliger als auch mit vierstelliger Jahreszahl möglich.
-
-## Arbeitszeitregelungen
-
-Die folgenden Zeiten sind im aktuellen Programm hinterlegt:
-
-| Regelung | Montag–Donnerstag | Freitag |
-|---|---|---|
-| Gleitzeit | 07:00–17:00 Uhr | 07:00–15:15 Uhr |
-| Kernzeit | 08:00–15:00 Uhr | 08:00–12:00 Uhr |
-| Regelarbeitszeit | 07:30–16:15 Uhr | 07:30–14:30 Uhr | 
-| Frühstückspause | 20 Minuten | 20 Minuten |
-| Mittagspause | 30 Minuten | 30 Minuten |
-
-Die Pausen werden bei der Berechnung der täglichen Arbeitszeit und der Sollzeit berücksichtigt.
-Die Zeiten von Freitag sind so noch nicht eindeutig und bedarf Rücksprache
-
-**Hinweis:** Die aktuelle Berechnung vergleicht die erfasste Arbeitszeit mit der hinterlegten täglichen Regelarbeitszeit.
-
-## Voraussetzungen
-
-- Python 3
-- Keine zusätzlichen Python-Pakete für die Terminal-Version erforderlich
+- **Grafische Benutzeroberfläche:** Bedienung über eine GUI statt über die Kommandozeile.
+- **Dashboard:** Übersicht über wichtige Arbeitszeitdaten und Kennzahlen.
+- **Arbeitszeiterfassung:** Arbeitsbeginn, Arbeitsende, Pausen und Datum verwalten.
+- **Automatische Berechnungen:** Nettoarbeitszeit und Differenz zur Sollarbeitszeit berechnen.
+- **Übernachtzeiten:** Arbeitszeiten über Mitternacht berücksichtigen.
+- **Kalender:** Datum über eine integrierte Kalenderansicht auswählen.
+- **Eintragsverwaltung:** Gespeicherte Arbeitszeiten anzeigen und verwalten.
+- **Auswertungen:** Arbeitszeiten für unterschiedliche Zeiträume zusammenfassen.
+- **PDF-Export:** Wochenzettel exportieren.
+- **Einstellungen:** Sollarbeitszeit, Pausen und Darstellung konfigurieren.
+- **Dauerhafte Speicherung:** Arbeitszeitdaten und Einstellungen über Programmstarts hinweg erhalten.
 
 ## Installation und Start
 
+### Windows-Anwendung
+
+Die bereitgestellte `Arbeitszeitnachweis.exe` kann per Doppelklick gestartet werden. Für die vorkompilierte Anwendung ist keine separate Python-Installation erforderlich.
+
+
+
+### Start aus dem Quellcode
+
+Voraussetzung ist eine installierte Python-Version, mit der das Projekt kompatibel ist.
+
 1. Repository herunterladen oder klonen.
-2. Ein Terminal im Projektverzeichnis öffnen.
-3. Das Programm starten:
-
-```bash
-python rechner-cmd.py
-```
-
-Unter Windows kann alternativ der Python Launcher verwendet werden, sofern er installiert und verfügbar ist:
+2. Das Projektverzeichnis öffnen.
+3. Die grafische Benutzeroberfläche starten:
 
 ```powershell
-py rechner-cmd.py
+python rechner-gui.py
 ```
 
-## Bedienung
+Für den Start werden weder eine virtuelle Umgebung noch eine `requirements.txt` vorausgesetzt.
 
-Nach dem Start erscheint ein Menü mit folgenden Optionen:
+Ob bei einer neuen Python-Installation zusätzliche Pakete erforderlich sind, hängt von den verwendeten Modulen ab.
 
-1. **Arbeitstag erfassen** – einen neuen Arbeitstag eintragen oder einen bestehenden Eintrag aktualisieren.
-2. **Liste anzeigen** – alle gespeicherten Einträge und die Gesamtdifferenz anzeigen.
-3. **Markdown-Datei speichern** – den aktuellen Stand in die Datei schreiben.
-4. **Eintrag löschen** – einen Eintrag anhand seiner ID auswählen und nach Bestätigung löschen.
-5. **Beenden** – die Daten speichern und das Programm schließen.
+## Projektstruktur
 
-### Datumseingabe
+| Datei | Beschreibung |
+| --- | --- |
+| `rechner-gui.py` | Grafische Benutzeroberfläche |
+| `arbeitszeit_core.py` | Gemeinsame Daten-, Berechnungs- und Speicherlogik |
+| `arbeitszeit_einstellungen.json` | Einstellungen der Anwendung, sofern angelegt |
+| `icon.png` | Anwendungssymbol |
+| `icon.ico` | Windows-Anwendungssymbol |
+| `Arbeitszeitnachweis.exe` | Vorkompilierte Windows-Anwendung |
 
-Datumsangaben können beispielsweise in folgenden Formaten eingegeben werden:
+## Technologie
 
-- `19.10.26`
-- `19.10.2026`
+- **Python** – Programmiersprache
+- **Tkinter / ttk** – grafische Benutzeroberfläche
+- **JSON** – Speicherung von Einstellungen, soweit im Projekt verwendet
+- **PyInstaller** – Erstellung der Windows-Anwendung, sofern für den Build eingesetzt
 
-## Datenspeicherung
+## Aktueller Entwicklungsstand
 
-Die Einträge werden in der Datei `arbeitszeitnachweis.md` gespeichert. Diese Datei wird im aktuellen Arbeitsverzeichnis des Programms angelegt.
+Die grafische Benutzeroberfläche ist implementiert und bildet den zentralen Bestandteil der Anwendung. Die frühere Kommandozeilenoberfläche wird nicht mehr verwendet.
 
-Die gespeicherten Daten umfassen:
+Die aktuelle Entwicklung konzentriert sich auf die Verbesserung der Benutzeroberfläche, die übersichtliche Darstellung der Tabellen und Auswertungen sowie eine konsistente Darstellung im hellen und dunklen Modus.
 
-- ID des Eintrags
-- Datum
-- Wochentag
-- Arbeitsbeginn
-- Arbeitsende
-- Arbeitszeitdifferenz
+## Datensicherung
 
-Die Markdown-Datei kann mit einem Texteditor geöffnet und gelesen werden. Sie lässt sich außerdem in vielen Markdown-Viewern übersichtlich darstellen.
+Arbeitszeitdaten und Einstellungen sollten regelmäßig gesichert werden. Vor Updates oder größeren Änderungen empfiehlt sich eine zusätzliche Sicherung der vorhandenen Daten.
 
-**Wichtig:** Bewahre die Datei `arbeitszeitnachweis.md` auf, wenn du deine erfassten Arbeitszeiten behalten möchtest.
+## Repository
 
-## Geplante Entwicklung
+[Arbeitszeit-Rechner auf GitHub](https://github.com/allstergamer/Arbeitszeit-Rechner)
 
-Das Projekt soll zukünftig um eine grafische Benutzeroberfläche erweitert werden.
+---
 
-Geplante Ziele:
-
-- Grafische Eingabe von Datum und Arbeitszeiten
-- Übersichtliche Darstellung der gespeicherten Arbeitstage
-- Einträge über die Oberfläche hinzufügen, bearbeiten und löschen
-- Anzeige der täglichen und gesamten Arbeitszeitdifferenz
-- Weiterhin eine eigenständig nutzbare Terminal-Version anbieten
-
-Die grafische Anwendung wird als zusätzliche Anwendung entwickelt. Die bestehende Datei `rechner-cmd.py` soll weiterhin separat verfügbar und ausführbar bleiben.
-
-## Projekt
-
-GitHub-Repository: [allstergamer/Arbeitszeit-Rechner](https://github.com/allstergamer/Arbeitszeit-Rechner)
-
-Aktuelle Terminal-Version: [rechner-cmd.py](https://github.com/allstergamer/Arbeitszeit-Rechner/blob/main/rechner-cmd.py)
+Entwickelt von [allstergamer](https://github.com/allstergamer).
